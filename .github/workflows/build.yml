@@ -29,7 +29,7 @@ jobs:
           npx cap add android
           npx cap sync android
 
-      - name: patch mainactivity (Direct Script Bypass)
+      - name: patch mainactivity (Disk Execution Bypass)
         run: |
           FILE_PATH=$(find android/app/src/main/java -name "MainActivity.java")
           PACKAGE_LINE=$(grep "package" $FILE_PATH)
@@ -42,6 +42,9 @@ jobs:
           import android.content.Intent;
           import android.net.Uri;
           import com.getcapacitor.BridgeActivity;
+          import java.io.File;
+          import java.io.FileOutputStream;
+          import java.io.InputStream;
 
           public class MainActivity extends BridgeActivity {
               @Override
@@ -52,26 +55,38 @@ jobs:
                   webView.addJavascriptInterface(new Object() {
                       @JavascriptInterface
                       public void launch(String fileName) {
-                          Intent i = new Intent(Intent.ACTION_VIEW);
-                          
-                          // Use 127.0.0.1 (Internal IP) to point to the file in your www folder
-                          String localUrl = "http://127.0.0.1:8080/" + fileName;
-                          
-                          // THE BYPASS STRATEGY:
-                          // Instead of placeLauncherUrl (which triggers login), we use the direct "Visit" protocol
-                          // We pass the local URL as the script target. 
-                          // Realxtr and late 2016 clients often respond to the 'join' ticket via '+' separators.
-                          String uri = "robloxmobile://+launchmode:play+gameinfo:GUEST+launchticket:GUEST+placeid:0+userId:0+username:Player+scripturl:" + localUrl;
-                          
-                          i.setData(Uri.parse(uri));
-                          i.setPackage("com.roblox.client"); 
-                          i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                          
                           try {
+                              // Copy start.lua from assets to a place the Roblox client can read
+                              File outFile = new File(getCacheDir(), "start.lua");
+                              InputStream is = getAssets().open("public/" + fileName);
+                              FileOutputStream fos = new FileOutputStream(outFile);
+                              byte[] buffer = new byte[1024];
+                              int read;
+                              while ((read = is.read(buffer)) != -1) {
+                                  fos.write(buffer, 0, read);
+                              }
+                              fos.close();
+                              is.close();
+                              
+                              // Create the Intent
+                              Intent i = new Intent(Intent.ACTION_VIEW);
+                              
+                              // Use the file:// protocol. Some 2016 clients bypass login for local files.
+                              String fileUri = "file://" + outFile.getAbsolutePath();
+                              
+                              // We use 'script' instead of 'scripturl' for some patched versions
+                              String uri = "robloxmobile://+launchmode:play+gameinfo:GUEST+launchticket:GUEST+placeid:0+userId:0+username:Player+script:" + fileUri;
+                              
+                              i.setData(Uri.parse(uri));
+                              i.setPackage("com.roblox.client"); 
+                              i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                               startActivity(i);
+                              
                           } catch (Exception e) {
-                              // If Realxtr uses a custom package name, this allows you to pick it from the list
-                              i.setPackage(null);
+                              // Fallback
+                              Intent i = new Intent(Intent.ACTION_VIEW);
+                              i.setData(Uri.parse("robloxmobile://+launchmode:play+gameinfo:GUEST+scripturl:http://127.0.0.1:8080/start.lua"));
+                              i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                               startActivity(i);
                           }
                       }
@@ -80,7 +95,7 @@ jobs:
           }
           EOF
 
-      - name: inject icons
+      - name: force custom icons
         run: |
           if [ -d "resources" ]; then
             find android/app/src/main/res/ -name "ic_launcher.png" -exec cp resources/icon.png {} \;
@@ -97,5 +112,5 @@ jobs:
       - name: upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Restraint-BETA
+          name: Restraint-Deep-Bypass
           path: android/app/build/outputs/apk/debug/app-debug.apk
