@@ -24,10 +24,11 @@ jobs:
       - name: init capacitor
         run: |
           npx cap add android || true
-          npx cap sync
+          npx cap sync || true
 
       - name: inject bridge
         run: |
+          # force create the path if it's missing
           mkdir -p android/app/src/main/java/com/j5vz/restraint/
           cat <<EOF > android/app/src/main/java/com/j5vz/restraint/MainActivity.java
           package com.j5vz.restraint;
@@ -59,6 +60,12 @@ jobs:
       - name: build apk
         run: |
           cd android
+          # if gradlew is still missing, something is majorly wrong with the cap init
+          if [ ! -f "gradlew" ]; then
+            echo "GRADLEW MISSING - PRINTING DIR STRUCTURE"
+            ls -R ..
+            exit 1
+          fi
           chmod +x gradlew
           ./gradlew assembleDebug
 
