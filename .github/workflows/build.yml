@@ -14,23 +14,23 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: setup
+      - name: setup environment
         run: |
-          npm install
           npm install @capacitor/core @capacitor/android @capacitor/cli
           mkdir -p www
           cp index.html style.css start.lua www/ 2>/dev/null || true
 
-      - name: init capacitor
+      - name: fresh init
         run: |
-          npx cap add android || true
-          npx cap sync || true
+          # This only works if the 'android' folder is NOT in your repo
+          npx cap add android
+          npx cap sync
 
-      - name: inject bridge
+      - name: inject bridge logic
         run: |
-          # force create the path if it's missing
-          mkdir -p android/app/src/main/java/com/j5vz/restraint/
-          cat <<EOF > android/app/src/main/java/com/j5vz/restraint/MainActivity.java
+          # Find the auto-generated MainActivity and swap it with our bridged version
+          FILE_PATH=$(find android/app/src/main/java -name "MainActivity.java")
+          cat <<EOF > $FILE_PATH
           package com.j5vz.restraint;
           import android.os.Bundle;
           import android.webkit.WebView;
@@ -60,12 +60,6 @@ jobs:
       - name: build apk
         run: |
           cd android
-          # if gradlew is still missing, something is majorly wrong with the cap init
-          if [ ! -f "gradlew" ]; then
-            echo "GRADLEW MISSING - PRINTING DIR STRUCTURE"
-            ls -R ..
-            exit 1
-          fi
           chmod +x gradlew
           ./gradlew assembleDebug
 
