@@ -1,0 +1,53 @@
+name: Build Android APK
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: install deps
+        run: |
+          npm install
+          npm install @capacitor/core @capacitor/android @capacitor/cli cordova-res
+          mkdir -p www
+          cp -r index.html style.css script.js www/ || cp * www/ || true
+
+      - name: fix images
+        run: |
+          sudo apt-get install -y imagemagick
+          convert resources/icon.png -resize 1024x1024! resources/icon.png
+          convert resources/splash.png -resize 2732x2732! resources/splash.png
+
+      - name: fresh init
+        run: |
+          rm -rf android
+          npx cap add android
+          npx cap sync
+
+      - name: kill the adaptive virus
+        run: |
+          npx cordova-res android --skip-config --copy
+          rm -rf android/app/src/main/res/mipmap-anydpi-v26
+          sed -i 's/android:icon="@mipmap\/ic_launcher"/android:icon="@mipmap\/ic_launcher_round"/g' android/app/src/main/AndroidManifest.xml
+          find android/app/src/main/res/ -name "ic_launcher*.png" -exec cp resources/icon.png {} \;
+
+      - name: build apk zomgs
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: uploading?!?!
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
