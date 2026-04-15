@@ -29,8 +29,11 @@ jobs:
 
       - name: bridge
         run: |
+          # hard-coded path based on your package: com.j5vz.restraint
+          DEST="android/app/src/main/java/com/j5vz/restraint/MainActivity.java"
           mkdir -p android/app/src/main/java/com/j5vz/restraint/
-          cat <<EOF > android/app/src/main/java/com/j5vz/restraint/MainActivity.java
+          
+          cat <<EOF > $DEST
           package com.j5vz.restraint;
           import android.os.Bundle;
           import android.webkit.WebView;
@@ -56,15 +59,6 @@ jobs:
               }
           }
           EOF
-
-      - name: assets
-        run: |
-          sudo apt-get install -y imagemagick
-          mkdir -p resources
-          if [ ! -f resources/icon.png ]; then convert -size 1024x1024 xc:white resources/icon.png; fi
-          if [ ! -f resources/splash.png ]; then convert -size 2732x2732 xc:white resources/splash.png; fi
-          npx cordova-res android --skip-config --copy
-          rm -rf android/app/src/main/res/mipmap-anydpi-v26
 
       - name: build
         run: |
