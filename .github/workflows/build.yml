@@ -7,7 +7,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: setup node
+      - name: setup environment
         uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -22,15 +22,14 @@ jobs:
         run: |
           npm install @capacitor/core @capacitor/android @capacitor/cli
           mkdir -p www
-          # Ensures your HTML and Lua script are bundled inside the app
-          cp index.html style.css start.lua www/ 2>/dev/null || true
+          cp index.html start.lua www/ 2>/dev/null || true
 
       - name: initialize capacitor
         run: |
           npx cap add android
           npx cap sync android
 
-      - name: patch mainactivity (Automated Solo Server)
+      - name: patch mainactivity (Direct Script Bypass)
         run: |
           FILE_PATH=$(find android/app/src/main/java -name "MainActivity.java")
           PACKAGE_LINE=$(grep "package" $FILE_PATH)
@@ -55,12 +54,14 @@ jobs:
                       public void launch(String fileName) {
                           Intent i = new Intent(Intent.ACTION_VIEW);
                           
-                          // AUTOMATION: Capacitor serves the 'www' folder at localhost:8080
-                          // This tells the 2016 client to fetch the script from YOUR app.
-                          String localUrl = "http://localhost:8080/" + fileName;
+                          // Use 127.0.0.1 (Internal IP) to point to the file in your www folder
+                          String localUrl = "http://127.0.0.1:8080/" + fileName;
                           
-                          // +userId:0 +username:Player ensures you join as a Noob
-                          String uri = "robloxmobile://+launchmode:play+gameinfo:1+placeid:1818+userId:0+username:Player+placeLauncherUrl:" + localUrl;
+                          // THE BYPASS STRATEGY:
+                          // Instead of placeLauncherUrl (which triggers login), we use the direct "Visit" protocol
+                          // We pass the local URL as the script target. 
+                          // Realxtr and late 2016 clients often respond to the 'join' ticket via '+' separators.
+                          String uri = "robloxmobile://+launchmode:play+gameinfo:GUEST+launchticket:GUEST+placeid:0+userId:0+username:Player+scripturl:" + localUrl;
                           
                           i.setData(Uri.parse(uri));
                           i.setPackage("com.roblox.client"); 
@@ -69,7 +70,8 @@ jobs:
                           try {
                               startActivity(i);
                           } catch (Exception e) {
-                              i.setPackage(null); // Fallback to picker if package name is different
+                              // If Realxtr uses a custom package name, this allows you to pick it from the list
+                              i.setPackage(null);
                               startActivity(i);
                           }
                       }
@@ -78,12 +80,11 @@ jobs:
           }
           EOF
 
-      - name: force custom icons
+      - name: inject icons
         run: |
-          if [ -f "resources/icon.png" ]; then
+          if [ -d "resources" ]; then
             find android/app/src/main/res/ -name "ic_launcher.png" -exec cp resources/icon.png {} \;
             find android/app/src/main/res/ -name "ic_launcher_round.png" -exec cp resources/icon.png {} \;
-            find android/app/src/main/res/ -name "ic_launcher_foreground.png" -exec cp resources/icon.png {} \;
             rm -rf android/app/src/main/res/mipmap-anydpi-v26 2>/dev/null || true
           fi
 
@@ -96,5 +97,5 @@ jobs:
       - name: upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Restraint-Solo-Automated
+          name: Restraint-BETA
           path: android/app/build/outputs/apk/debug/app-debug.apk
