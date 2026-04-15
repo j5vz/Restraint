@@ -7,32 +7,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - uses: actions/setup-node@v4
+      - name: setup node
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           
-      - uses: actions/setup-java@v4
+      - name: setup java
+        uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: setup environment
+      - name: install dependencies
         run: |
           npm install @capacitor/core @capacitor/android @capacitor/cli
           mkdir -p www
-          # Copying your web files and the start script into the build
           cp index.html style.css start.lua www/ 2>/dev/null || true
 
-      - name: create android project
+      - name: initialize capacitor
         run: |
-          # Fresh generate since we are not storing the 'android' folder in git
+          # This generates the android folder fresh every time to ensure no missing gradle files
           npx cap add android
           npx cap sync android
 
-      - name: patch mainactivity
+      - name: patch mainactivity (bridge & direct join)
         run: |
-          # This finds the auto-generated file and injects the bridge
+          # Locate the auto-generated MainActivity.java
           FILE_PATH=$(find android/app/src/main/java -name "MainActivity.java")
+          # Grab the actual package line from the file to avoid mismatch crashes
           PACKAGE_LINE=$(grep "package" $FILE_PATH)
           
           cat <<EOF > $FILE_PATH
@@ -48,24 +50,26 @@ jobs:
               @Override
               public void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
+                  
                   WebView webView = this.getBridge().getWebView();
                   webView.addJavascriptInterface(new Object() {
                       @JavascriptInterface
                       public void launch(String script) {
                           Intent i = new Intent(Intent.ACTION_VIEW);
                           
-                          // THE LAUNCH STRING
-                          // +userId:0 and +username:Player makes it load as a guest noob
-                          // +placeid:1818 is a dummy ID to trigger the 'Play' mode
-                          String uri = "robloxmobile://+launchmode:play+gameinfo:1+placeid:1818+launchticket:1+userId:0+username:Player+scripturl:" + script;
+                          // +placeLauncherUrl is the key for 2016 clients to skip login
+                          // +userId:0 and +username:Player force the 'Studio Noob' look
+                          String uri = "robloxmobile://+launchmode:play+gameinfo:1+placeid:1818+userId:0+username:Player+placeLauncherUrl:" + script;
                           
                           i.setData(Uri.parse(uri));
+                          // This targets the 2016 client specifically to bypass the 'Open with' picker
                           i.setPackage("com.roblox.client"); 
                           i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                           
                           try {
                               startActivity(i);
                           } catch (Exception e) {
+                              // If package isn't com.roblox.client, let the user pick
                               i.setPackage(null);
                               startActivity(i);
                           }
@@ -75,15 +79,15 @@ jobs:
           }
           EOF
 
-      - name: inject icons and splash
+      - name: force custom icons
         run: |
-          # This forces your resources/icon.png into all the Android icon slots
-          if [ -d "resources" ]; then
+          # Replace all default Android icons with your resources/icon.png
+          if [ -f "resources/icon.png" ]; then
             find android/app/src/main/res/ -name "ic_launcher.png" -exec cp resources/icon.png {} \;
             find android/app/src/main/res/ -name "ic_launcher_round.png" -exec cp resources/icon.png {} \;
             find android/app/src/main/res/ -name "ic_launcher_foreground.png" -exec cp resources/icon.png {} \;
             
-            # Remove adaptive XML so it uses your actual PNG
+            # Delete the adaptive icon XMLs that often override PNG icons on newer Android versions
             rm -rf android/app/src/main/res/mipmap-anydpi-v26 2>/dev/null || true
           fi
 
@@ -93,8 +97,8 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      - name: upload
+      - name: upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Restraint-Build
+          name: Restraint-Final-Build
           path: android/app/build/outputs/apk/debug/app-debug.apk
