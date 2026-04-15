@@ -1,15 +1,40 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-  <title>HTMLAppBuilder</title>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title></title>
+    <style>
+        body { background: #000; color: #0f0; font-family: monospace; padding: 20px; }
+        #log { margin-bottom: 20px; white-space: pre-wrap; }
+        input { background: transparent; border: none; color: #0f0; outline: none; width: 100%; font-family: monospace; }
+    </style>
 </head>
-
 <body>
-  Hello World!
-</body>
+    <div id="log">RESTRAINT 2016 BOOTLOADER v1</div>
+    <div id="log">Restraint has fully been coded by @j5vz from SCX2.</div>
+    <span>> </span><input type="text" id="cmd" autofocus>
 
+    <script>
+        const log = document.getElementById('log');
+        const cmd = document.getElementById('cmd');
+
+        cmd.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const val = cmd.value.toLowerCase();
+                log.innerHTML += `\n> ${val}`;
+                
+                if (val === 'launchrbx') {
+                    log.innerHTML += '\nFiring client...';
+                    const scriptUrl = encodeURIComponent('http://127.0.0.1:8080/start.lua');
+                    window.location.href = `robloxmobile://?launchTicket=1&script=${scriptUrl}`;
+                } else if (val === 'help') {
+                    log.innerHTML += '\navailable: launch, clear, exit';
+                } else if (val === 'clear') {
+                    log.innerHTML = '';
+                }
+                
+                cmd.value = '';
+                window.scrollTo(0, document.body.scrollHeight);
+            }
+        });
+    </script>
+</body>
 </html>
