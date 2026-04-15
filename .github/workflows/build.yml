@@ -20,18 +20,18 @@ jobs:
         run: |
           npm install @capacitor/core @capacitor/android @capacitor/cli
           mkdir -p www
+          # Copying your web files and the start script into the build
           cp index.html style.css start.lua www/ 2>/dev/null || true
 
       - name: create android project
         run: |
-          # Freshly generate the android folder
+          # Fresh generate since we are not storing the 'android' folder in git
           npx cap add android
           npx cap sync android
 
       - name: patch mainactivity
         run: |
-          # Find the auto-generated file and inject code
-          # This keeps the package name exactly as Capacitor generated it
+          # This finds the auto-generated file and injects the bridge
           FILE_PATH=$(find android/app/src/main/java -name "MainActivity.java")
           PACKAGE_LINE=$(grep "package" $FILE_PATH)
           
@@ -53,9 +53,22 @@ jobs:
                       @JavascriptInterface
                       public void launch(String script) {
                           Intent i = new Intent(Intent.ACTION_VIEW);
-                          i.setData(Uri.parse("robloxmobile://?launchTicket=1&script=" + script));
+                          
+                          // THE LAUNCH STRING
+                          // +userId:0 and +username:Player makes it load as a guest noob
+                          // +placeid:1818 is a dummy ID to trigger the 'Play' mode
+                          String uri = "robloxmobile://+launchmode:play+gameinfo:1+placeid:1818+launchticket:1+userId:0+username:Player+scripturl:" + script;
+                          
+                          i.setData(Uri.parse(uri));
+                          i.setPackage("com.roblox.client"); 
                           i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                          startActivity(i);
+                          
+                          try {
+                              startActivity(i);
+                          } catch (Exception e) {
+                              i.setPackage(null);
+                              startActivity(i);
+                          }
                       }
                   }, "RestraintBridge");
               }
@@ -64,14 +77,13 @@ jobs:
 
       - name: inject icons and splash
         run: |
-          # Copy from your root /resources into the newly created android folders
+          # This forces your resources/icon.png into all the Android icon slots
           if [ -d "resources" ]; then
-            # Replace all launcher icons with your custom icon
             find android/app/src/main/res/ -name "ic_launcher.png" -exec cp resources/icon.png {} \;
             find android/app/src/main/res/ -name "ic_launcher_round.png" -exec cp resources/icon.png {} \;
             find android/app/src/main/res/ -name "ic_launcher_foreground.png" -exec cp resources/icon.png {} \;
             
-            # Remove the adaptive XML that forces the default icon
+            # Remove adaptive XML so it uses your actual PNG
             rm -rf android/app/src/main/res/mipmap-anydpi-v26 2>/dev/null || true
           fi
 
