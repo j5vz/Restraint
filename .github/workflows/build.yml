@@ -17,7 +17,7 @@ jobs:
       - name: setup
         run: |
           npm install
-          npm install @capacitor/core @capacitor/android @capacitor/cli cordova-res
+          npm install @capacitor/core @capacitor/android @capacitor/cli
           mkdir -p www
           cp index.html style.css start.lua www/ 2>/dev/null || true
 
@@ -28,10 +28,7 @@ jobs:
 
       - name: inject bridge
         run: |
-          # making sure the folder exists first
           mkdir -p android/app/src/main/java/com/j5vz/restraint/
-          
-          # writing the custom MainActivity directly to the source
           cat <<EOF > android/app/src/main/java/com/j5vz/restraint/MainActivity.java
           package com.j5vz.restraint;
           import android.os.Bundle;
@@ -58,15 +55,6 @@ jobs:
               }
           }
           EOF
-
-      - name: preserve resources
-        run: |
-          # this keeps your icons and splash if they exist in the resources folder
-          if [ -d "resources" ]; then
-            npx cordova-res android --skip-config --copy
-          fi
-          # prevents android from using the default adaptive icon that ignores yours
-          rm -rf android/app/src/main/res/mipmap-anydpi-v26 2>/dev/null || true
 
       - name: build apk
         run: |
