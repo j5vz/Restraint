@@ -26,15 +26,12 @@ jobs:
 
       - name: initialize capacitor
         run: |
-          # This generates the android folder fresh every time to ensure no missing gradle files
           npx cap add android
           npx cap sync android
 
-      - name: patch mainactivity (bridge & direct join)
+      - name: patch mainactivity (Solo Local Host)
         run: |
-          # Locate the auto-generated MainActivity.java
           FILE_PATH=$(find android/app/src/main/java -name "MainActivity.java")
-          # Grab the actual package line from the file to avoid mismatch crashes
           PACKAGE_LINE=$(grep "package" $FILE_PATH)
           
           cat <<EOF > $FILE_PATH
@@ -57,19 +54,17 @@ jobs:
                       public void launch(String script) {
                           Intent i = new Intent(Intent.ACTION_VIEW);
                           
-                          // +placeLauncherUrl is the key for 2016 clients to skip login
-                          // +userId:0 and +username:Player force the 'Studio Noob' look
+                          // +launchmode:play + userId:0 + username:Player forces the noob look
+                          // We use placeLauncherUrl to point to your local server script
                           String uri = "robloxmobile://+launchmode:play+gameinfo:1+placeid:1818+userId:0+username:Player+placeLauncherUrl:" + script;
                           
                           i.setData(Uri.parse(uri));
-                          // This targets the 2016 client specifically to bypass the 'Open with' picker
                           i.setPackage("com.roblox.client"); 
                           i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                           
                           try {
                               startActivity(i);
                           } catch (Exception e) {
-                              // If package isn't com.roblox.client, let the user pick
                               i.setPackage(null);
                               startActivity(i);
                           }
@@ -81,13 +76,10 @@ jobs:
 
       - name: force custom icons
         run: |
-          # Replace all default Android icons with your resources/icon.png
           if [ -f "resources/icon.png" ]; then
             find android/app/src/main/res/ -name "ic_launcher.png" -exec cp resources/icon.png {} \;
             find android/app/src/main/res/ -name "ic_launcher_round.png" -exec cp resources/icon.png {} \;
             find android/app/src/main/res/ -name "ic_launcher_foreground.png" -exec cp resources/icon.png {} \;
-            
-            # Delete the adaptive icon XMLs that often override PNG icons on newer Android versions
             rm -rf android/app/src/main/res/mipmap-anydpi-v26 2>/dev/null || true
           fi
 
@@ -100,5 +92,5 @@ jobs:
       - name: upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Restraint-Final-Build
+          name: Restraint-Solo-Build
           path: android/app/build/outputs/apk/debug/app-debug.apk
