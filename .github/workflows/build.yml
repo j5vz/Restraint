@@ -21,19 +21,18 @@ jobs:
           mkdir -p www
           cp index.html style.css start.lua www/ 2>/dev/null || true
 
-      - name: init
+      - name: init capacitor
         run: |
-          rm -rf android
-          npx cap add android
+          npx cap add android || true
           npx cap sync
 
-      - name: bridge
+      - name: inject bridge
         run: |
-          # hard-coded path based on your package: com.j5vz.restraint
-          DEST="android/app/src/main/java/com/j5vz/restraint/MainActivity.java"
+          # making sure the folder exists first
           mkdir -p android/app/src/main/java/com/j5vz/restraint/
           
-          cat <<EOF > $DEST
+          # writing the custom MainActivity directly to the source
+          cat <<EOF > android/app/src/main/java/com/j5vz/restraint/MainActivity.java
           package com.j5vz.restraint;
           import android.os.Bundle;
           import android.webkit.WebView;
@@ -60,7 +59,16 @@ jobs:
           }
           EOF
 
-      - name: build
+      - name: preserve resources
+        run: |
+          # this keeps your icons and splash if they exist in the resources folder
+          if [ -d "resources" ]; then
+            npx cordova-res android --skip-config --copy
+          fi
+          # prevents android from using the default adaptive icon that ignores yours
+          rm -rf android/app/src/main/res/mipmap-anydpi-v26 2>/dev/null || true
+
+      - name: build apk
         run: |
           cd android
           chmod +x gradlew
