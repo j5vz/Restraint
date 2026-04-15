@@ -6,9 +6,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          
       - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
@@ -20,18 +22,21 @@ jobs:
           mkdir -p www
           cp index.html style.css start.lua www/ 2>/dev/null || true
 
-      - name: fresh init
+      - name: create android project
         run: |
-          # This only works if the 'android' folder is NOT in your repo
+          # Freshly generate the android folder
           npx cap add android
-          npx cap sync
+          npx cap sync android
 
-      - name: inject bridge logic
+      - name: patch mainactivity
         run: |
-          # Find the auto-generated MainActivity and swap it with our bridged version
+          # Find the auto-generated file and inject code
+          # This keeps the package name exactly as Capacitor generated it
           FILE_PATH=$(find android/app/src/main/java -name "MainActivity.java")
+          PACKAGE_LINE=$(grep "package" $FILE_PATH)
+          
           cat <<EOF > $FILE_PATH
-          package com.j5vz.restraint;
+          $PACKAGE_LINE
           import android.os.Bundle;
           import android.webkit.WebView;
           import android.webkit.JavascriptInterface;
@@ -56,6 +61,19 @@ jobs:
               }
           }
           EOF
+
+      - name: inject icons and splash
+        run: |
+          # Copy from your root /resources into the newly created android folders
+          if [ -d "resources" ]; then
+            # Replace all launcher icons with your custom icon
+            find android/app/src/main/res/ -name "ic_launcher.png" -exec cp resources/icon.png {} \;
+            find android/app/src/main/res/ -name "ic_launcher_round.png" -exec cp resources/icon.png {} \;
+            find android/app/src/main/res/ -name "ic_launcher_foreground.png" -exec cp resources/icon.png {} \;
+            
+            # Remove the adaptive XML that forces the default icon
+            rm -rf android/app/src/main/res/mipmap-anydpi-v26 2>/dev/null || true
+          fi
 
       - name: build apk
         run: |
