@@ -112,5 +112,5 @@ jobs:
       - name: upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Restraint-Deep-Bypass
+          name: Restraint-BETA
           path: android/app/build/outputs/apk/debug/app-debug.apk
