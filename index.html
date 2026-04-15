@@ -2,37 +2,95 @@
 <html>
 <head>
     <style>
-        body { background: #000; color: #0f0; font-family: monospace; padding: 20px; }
-        #log { margin-bottom: 20px; white-space: pre-wrap; }
-        input { background: transparent; border: none; color: #0f0; outline: none; width: 100%; font-family: monospace; }
+        body { 
+            background: #ffffff; 
+            color: #000000; 
+            font-family: 'Courier New', monospace; 
+            padding: 20px; 
+            margin: 0;
+        }
+        #log { 
+            white-space: pre-wrap; 
+            line-height: 1.4;
+        }
+        .sys { color: #ff8c00; } /* orange for system/alerts */
+        .cmd { color: #0000ff; } /* blue for commands */
+        .out { color: #000000; } /* black for output */
+        
+        #input-container { display: flex; margin-top: 10px; }
+        #prompt { color: #0000ff; font-weight: bold; margin-right: 5px; }
+        input { 
+            background: transparent; 
+            border: none; 
+            color: #000000; 
+            outline: none; 
+            flex: 1; 
+            font-family: inherit; 
+        }
     </style>
 </head>
 <body>
-    <div id="log">RESTRAINT 2016 BOOTLOADER v1</div>
-    <div id="log">Restraint has fully been coded by @j5vz from SCX2.</div>
-    <span>> </span><input type="text" id="cmd" autofocus>
+    <div id="log"><span class="sys">RESTRAINT 2016 BOOTLOADER v1</span>
+<span class="out">Restraint has fully been coded by @j5vz from SCX2.</span></div>
+
+    <div id="input-container">
+        <span id="prompt">></span>
+        <input type="text" id="cmd" autofocus>
+    </div>
 
     <script>
         const log = document.getElementById('log');
         const cmd = document.getElementById('cmd');
+        const startTime = Date.now();
+
+        const append = (text, className = 'out') => {
+            log.innerHTML += `\n<span class="${className}">${text}</span>`;
+            window.scrollTo(0, document.body.scrollHeight);
+        };
 
         cmd.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                const val = cmd.value.toLowerCase();
-                log.innerHTML += `\n> ${val}`;
-                
-                if (val === 'launchrbx') {
-                    log.innerHTML += '\nFiring client...';
-                    const scriptUrl = encodeURIComponent('http://127.0.0.1:8080/start.lua');
-                    window.location.href = `robloxmobile://?launchTicket=1&script=${scriptUrl}`;
-                } else if (val === 'help') {
-                    log.innerHTML += '\navailable: launch, clear, exit';
-                } else if (val === 'clear') {
-                    log.innerHTML = '';
-                }
-                
+                const rawVal = cmd.value.trim();
+                const val = rawVal.toLowerCase();
+                append(`> ${rawVal}`, 'cmd');
                 cmd.value = '';
-                window.scrollTo(0, document.body.scrollHeight);
+
+                if (val === 'launchrbx') {
+                    append('Firing client...', 'sys');
+                    const scriptUrl = "https://raw.githubusercontent.com/j5vz/Restraint/main/start.lua";
+                    if (window.RestraintBridge) {
+                        RestraintBridge.launch(scriptUrl);
+                    } else {
+                        append('ERR: RestraintBridge not found. Use Android.', 'sys');
+                    }
+                } 
+                else if (val === 'getfps()') {
+                    // simulate fps since webview stays at 60 usually.........
+                    const fps = Math.floor(Math.random() * (62 - 58) + 58);
+                    append(`${fps} FPS`, 'out');
+                }
+                else if (val === 'runtime') {
+                    const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+                    append(`Session Runtime: ${elapsed}s`, 'out');
+                }
+                else if (val.startsWith('executecode(')) {
+                    const code = rawVal.match(/\(([^)]+)\)/);
+                    if (code) {
+                        append(`Executing: ${code[1]}`, 'sys');
+                        // logic to send code to client would go here cuz yes
+                    } else {
+                        append('Usage: executeCode(your_script)', 'sys');
+                    }
+                }
+                else if (val === 'help') {
+                    append('Available: launchrbx, getFPS(), runtime, executeCode(str), clear', 'sys');
+                } 
+                else if (val === 'clear') {
+                    log.innerHTML = '<span class="sys">RESTRAINT_OS Cleared.</span>';
+                }
+                else {
+                    append(`Unknown command: ${val}`, 'sys');
+                }
             }
         });
     </script>
