@@ -1,6 +1,6 @@
 {
-  "appId": "com.test.html",
-  "appName": "HTML App",
+  "appId": "com.j5vz.restraintcli",
+  "appName": "RestraintCLI",
   "webDir": "www",
   "bundledWebRuntime": false
 }
