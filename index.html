@@ -30,7 +30,7 @@
     </style>
 </head>
 <body>
-    <div id="log"><span class="sys">RESTRAINT 2016 BOOTLOADER v1</span>
+    <div id="log"><span class="sys">RESTRAINT 2016 BOOTLOADER</span>
 <span class="out">Restraint has fully been coded by @j5vz from SCX2.</span></div>
 
     <div id="input-container">
@@ -74,20 +74,11 @@
                     const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
                     append(`Session Runtime: ${elapsed}s`, 'out');
                 }
-                else if (val.startsWith('executecode(')) {
-                    const code = rawVal.match(/\(([^)]+)\)/);
-                    if (code) {
-                        append(`Executing: ${code[1]}`, 'sys');
-                        // logic to send code to client would go here cuz yes
-                    } else {
-                        append('Usage: executeCode(your_script)', 'sys');
-                    }
-                }
                 else if (val === 'help') {
                     append('Available: launchrbx, getFPS(), runtime, executeCode(str), clear', 'sys');
                 } 
                 else if (val === 'clear') {
-                    log.innerHTML = '<span class="sys">RESTRAINT_OS Cleared.</span>';
+                    log.innerHTML = '<span class="sys">RESTRAINT Console cleared.</span>';
                 }
                 else {
                     append(`Unknown command: ${val}`, 'sys');
