@@ -1,14 +1,12 @@
--- Hi, this was entirely coded by me- AKA j5vz. Please don't tamper or steal my code. If i decide to make it Open-Source, feel free to use it.
+-- this runs inside the client
+local game = game
+local network = game:GetService("NetworkClient")
 
-local run = game:GetService("RunService")
-local players = game:GetService("Players")
-local content = game:GetService("ContentProvider")
+-- this is the old way to manually load a data model
+-- usually you would point this to an online asset but older clients could sometimes read from the local content folder
+game:Load("rbxasset://maps/Baseplate.rbxl") 
 
-run:Run()
+-- setup basic character/lighting so that its not a shitty black screen (nightmare for me)
+game:GetService("Visit"):SetUploadUrl("")
 
-local player = players:CreateLocalPlayer(0)
-player.CharacterAppearance = "rbxasset://fonts/charactermesh.xml"
-
-game:Load("rbxasset://maps/Baseplate.rbxl")
-
-workspace:InsertContent("rbxasset://Config/DefaultLib.rbxmx")
+-- Inshallah this works 🙏
