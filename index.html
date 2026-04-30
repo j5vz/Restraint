@@ -13,9 +13,9 @@
             white-space: pre-wrap; 
             line-height: 1.4;
         }
-        .sys { color: #ff8c00; } /* orange for system/alerts */
-        .cmd { color: #0000ff; } /* blue for commands */
-        .out { color: #000000; } /* black for output */
+        .sys { color: #ff8c00; } 
+        .cmd { color: #0000ff; } 
+        .out { color: #000000; } 
         
         #input-container { display: flex; margin-top: 10px; }
         #prompt { color: #0000ff; font-weight: bold; margin-right: 5px; }
@@ -30,7 +30,7 @@
     </style>
 </head>
 <body>
-    <div id="log"><span class="sys">RESTRAINT 2016 BOOTLOADER</span>
+    <div id="log"><span class="sys">RESTRAINT LAUNCHER</span>
 <span class="out">Restraint has fully been coded by @j5vz from SCX2.</span></div>
 
     <div id="input-container">
@@ -48,6 +48,18 @@
             window.scrollTo(0, document.body.scrollHeight);
         };
 
+        const boot = (scriptName) => {
+            const host = "http://10.0.2.2:8080/"; 
+            const luaUrl = encodeURIComponent(host + scriptName);
+            const uri = `robloxmobile://?placeId=0&script=${luaUrl}`;
+            
+            if (window.RestraintBridge) {
+                window.RestraintBridge.launch(scriptName);
+            } else {
+                window.location.href = uri;
+            }
+        };
+
         cmd.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 const rawVal = cmd.value.trim();
@@ -57,29 +69,27 @@
 
                 if (val === 'launchrbx') {
                     append('Firing local client...', 'sys');
-                    // just pass the filename now for the automated internal server
-                    if (window.RestraintBridge) {
-                        RestraintBridge.launch("start.lua");
-                    } else {
-                        append('ERR: RestraintBridge not found.', 'sys');
-                    }
+                    boot("join.lua");
                 } 
 
-                else if (val === 'getfps()') {
-                    // simulate fps since webview stays at 60 usually.........
+                else if (val === 'getfps') {
                     const fps = Math.floor(Math.random() * (62 - 58) + 58);
                     append(`${fps} FPS`, 'out');
                 }
+
                 else if (val === 'runtime') {
                     const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
                     append(`Session Runtime: ${elapsed}s`, 'out');
                 }
+
                 else if (val === 'help') {
-                    append('Available: launchrbx, getFPS(), runtime, executeCode(str), clear', 'sys');
+                    append('Available: launchrbx, getfps, runtime, clear', 'sys');
                 } 
+
                 else if (val === 'clear') {
                     log.innerHTML = '<span class="sys">RESTRAINT Console cleared.</span>';
                 }
+
                 else {
                     append(`Unknown command: ${val}`, 'sys');
                 }
@@ -88,3 +98,4 @@
     </script>
 </body>
 </html>
+
